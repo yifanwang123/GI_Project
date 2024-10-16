@@ -1,0 +1,24 @@
+level 0: 31 
+level 1: 8 
+level 1: 8 
+level 1: 37 
+level 1: 8 
+level 1: 8 
+level 1: 41 
+level 1: 8 
+level 1: 8 
+level 1: 33 
+level 1: 33 
+level 1: 8 
+level 1: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+level 2: 8 
+[5, 29, 1, 26, 2, 6, 0, 30, 25, 24, 10, 11, 7, 8, 9, 3, 27, 28, 4, 23, 15, 16, 22, 14, 17, 21, 12, 18, 20, 13, 19, 42, 32, 37, 41, 33, 36, 35, 39, 40, 31, 34, 38]
+0.292147159576416s
+Success! iso: False

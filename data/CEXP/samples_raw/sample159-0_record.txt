@@ -1,0 +1,36 @@
+level 0: 43 
+level 1: 17 
+level 1: 17 
+level 1: 48 
+level 1: 17 
+level 1: 17 
+level 1: 55 
+level 1: 17 
+level 1: 17 
+level 1: 48 
+level 1: 17 
+level 1: 17 
+level 1: 65 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 1: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+level 2: 17 
+[3, 6, 34, 5, 39, 36, 2, 9, 41, 42, 35, 4, 0, 40, 8, 7, 1, 38, 37, 10, 14, 18, 22, 26, 32, 30, 29, 25, 21, 17, 13, 12, 16, 20, 24, 28, 31, 33, 27, 23, 19, 15, 11, 46, 50, 54, 58, 62, 64, 63, 59, 55, 51, 47, 43, 45, 44, 49, 48, 53, 52, 57, 56, 61, 60, 66, 65]
+1.6161134243011475s
+Success! iso: False

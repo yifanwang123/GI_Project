@@ -1,0 +1,27 @@
+level 0: 30 
+level 1: 38 
+level 1: 39 
+level 1: 39 
+level 1: 38 
+level 1: 30 
+level 1: 31 
+level 1: 31 
+level 1: 30 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+level 2: 5 
+[31, 11, 32, 30, 6, 5, 29, 4, 27, 2, 1, 24, 23, 33, 12, 3, 7, 21, 8, 22, 26, 25, 28, 10, 9, 0, 19, 15, 17, 13, 41, 35, 16, 20, 14, 18, 36, 40, 37, 38, 39, 34]
+0.4002964496612549s
