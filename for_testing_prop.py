@@ -90,15 +90,15 @@ def evaluate_model(model, dataloader, device, purpose='valid'):
             graph_1_nodes_tensor = graph_1_nodes_tensor.to(device)
             graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
             labels = labels.to(device)
-            print(device)
+            # print(device)
             is_correct = model(graph_1_data_tensor, graph_2_data_tensor)
             # loss = criterion(score, labels, idx1, idx2, graph_1_nodes_tensor, graph_2_nodes_tensor)
             # acc = eval_acc(labels, score, purpose)
             if is_correct:
             # total_loss += loss.item()
                 accuracy += 1
-            else:
-                sys.exit()
+            # else:
+                
 
     return accuracy/(len(dataloader.dataset))
 

@@ -787,14 +787,18 @@ class ExactModel(nn.Module):
                         # print(new_partition)
                         # sys.exit()
                         next_layer.append(one_child)
-            # if level == 2:
-            #     sys.exit()
-            # for leaf in next_layer:
-            leng = int(len(next_layer)*self.prop)
-            print(leng)
-            current_layer = next_layer[:leng]
+
+
+            print(len(next_layer))
+            print('======================================')
+            if len(next_layer) == 1:
+                current_layer = next_layer
+            else:
+                leng = math.ceil((len(next_layer)*self.prop))
+                print(leng)
+                current_layer = next_layer[:leng]
             next_layer = []
-        
+        print(len(leaves))
         # print(i for i in leaves.keys())
         # print(leaves)
         # sequences = list(leaves.values())

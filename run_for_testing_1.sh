@@ -10,6 +10,7 @@ cuda=0
 reg_lambda=0.001
 runs=5
 epochs=500
+prop=0.005
 
 
 
@@ -26,5 +27,6 @@ if [ "$method" = "GIN" ]; then
         --epochs $epochs \
         --runs $runs \
         --cuda $cuda \
+        --prop $prop \
         --lr $lr
 fi
