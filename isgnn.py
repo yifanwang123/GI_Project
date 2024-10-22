@@ -174,33 +174,6 @@ class ExactModel(nn.Module):
         
         return S
 
-    # def compute_invariant(self, cls):
-    #     invariant = []
-    #     cell_structure = {}
-    #     for idx, cell_id in enumerate(cls):
-    #         if cell_id not in cell_structure:
-    #             cell_structure[cell_id] = []
-    #         cell_structure[cell_id].append(idx)
-    #     for cell_id in sorted(cell_structure):
-    #         cell = cell_structure[cell_id]
-    #         # sys.exit()
-    #         cell_invariant = self.cell_invariant(cell, cls)
-    #         invariant.append(cell_invariant)
-    #     # return tuple(sorted(invariant))
-    #     return tuple(sorted(invariant))
-
-
-    # def cell_invariant(self, cell, cls):
-    #     # cell = 
-    #     cell_neighbors = []
-    #     for vertex in cell:
-    #         neighbors = self.graph.neighbor_dict[vertex]
-    #         neighbor_degrees = sorted([[len(self.graph.neighbor_dict[neighbor]), cls[neighbor]] for neighbor in neighbors])
-    #         # print(vertex, neighbor_degrees)
-    #         cell_neighbors.append(tuple(neighbor_degrees))
-    #     return tuple(sorted(cell_neighbors))
-
-
     def infoco(self, data: Data, p: torch.Tensor, device) -> torch.Tensor:
         """
         Computes the local information S for each node in a single directed graph,
@@ -262,10 +235,8 @@ class ExactModel(nn.Module):
         
         return S_log
 
-
-
     def refine(self, info, num_nodes, data, device):
-        print(device)
+        # print(device)
         fixed = False
         prev = info
         time = 0
@@ -302,9 +273,7 @@ class ExactModel(nn.Module):
         new_p = new_p.squeeze()
         return new_p
 
-
-
-    def inid(self, partition, idx, length):
+    def inid(self, partition, idx, length, num_nodes):
         if not isinstance(partition, torch.Tensor):
             raise TypeError("A must be a torch.Tensor.")
         if partition.dim() != 1:
@@ -317,12 +286,13 @@ class ExactModel(nn.Module):
         B = partition.clone()
         # Increment the i-th element
         
-        if partition[idx] != 100:
+        
+
+        if partition[idx] != num_nodes:
             B[idx] = partition[idx] + length - 1
         else:
             B[idx] = partition[idx] - (length - 1)
         return B
-    
 
     def cl_form(self, leaves):
         leaves_converted = {key: [tensor.tolist() for tensor in value] for key, value in leaves.items()}
@@ -378,61 +348,6 @@ class ExactModel(nn.Module):
             indices = indices.tolist()
         # print(partition)
         return indices
-
-
-    # def forward_1(self, data, device):
-    #     leaves = {}
-    #     print(f'number of nodes: {data.x.shape[0]}')
-    #     # print(data.x.device)
-    #     num_nodes = data.x.shape[0]
-    #     current_layer = []
-    #     next_layer = []
-    #     p_0 = self.refine(data.x, num_nodes, data, device)
-    #     root = TreeNode(p_0)
-    #     root.score = torch.sum(self.infoco1(data, p_0, device)).item()
-    #     # print(p_0)
-    #     # sys.exit()
-
-    #     current_layer.append(p_0)
-    #     level = 0
-    #     while current_layer:
-    #         print('level', level)
-    #         level += 1
-    #         node_in_current_layer = 1
-    #         for curr_part in current_layer:
-                
-    #             # print('node in this level:', node_in_current_layer)
-    #             node_in_current_layer += 1
-    #             if self.is_discrete(curr_part):
-    #                 # print('here')
-
-    #                 leaves[curr_part] = torch.sum(self.infoco1(data, curr_part, device))
-    #             else:
-    #                 target_cell = self.target_cell(curr_part)
-    #                 # print('target cell', target_cell)
-    #                 # sys.exit()
-
-    #                 for idx in target_cell:
-    #                     temp_partition = self.inid(curr_part, idx, len(target_cell))
-    #                     # print(temp_partition)
-    #                     # sys.exit()
-    #                     new_info = self.infoco(data, temp_partition, device)
-    #                     # print(f'node {idx}: new info finihsed')
-    #                     new_partition = self.refine(new_info, num_nodes, data, device)
-
-    #                     # print(new_partition)
-    #                     # sys.exit()
-    #                     next_layer.append(new_partition)
-    #         # if level == 2:
-    #         #     sys.exit()
-    #         current_layer = next_layer
-    #         next_layer = []
-        
-    #     # print(i for i in leaves.keys())
-    #     # print(leaves)
-    #     cl_form = self.cl_form(leaves)
-         
-    #     return cl_form, leaves
 
     def torch_lexsort(self, keys):
         """
@@ -585,9 +500,6 @@ class ExactModel(nn.Module):
         # largest_sequence = sequences[largest_idx]
         return largest_idx
 
-
-
-
     def refine_partition(self, a, edge_index):
         """
         Refines the partition 'a' of a graph with edges given by 'edge_index' using tensor operations.
@@ -697,13 +609,6 @@ class ExactModel(nn.Module):
         # Return the refined partition
         return a
 
-
-
-
-
-
-
-
     def forward(self, data, device):
         leaves = {}
         # print(f'number of nodes: {data.x.shape[0]}')
@@ -734,22 +639,10 @@ class ExactModel(nn.Module):
 
             for curr_treeNode in current_layer:
                 curr_score = curr_treeNode.score
-
-
-
-
-                # print(curr_treeNode.partition, curr_treeNode.score)
-                # print('node in this level:', node_in_current_layer)
                 node_in_current_layer += 1
                 if self.is_discrete(curr_treeNode.partition):
-                    # print('here1')
-
-                    # leaves[treeNode.partition] = torch.sum(self.infoco1(data, curr_part, device))
                     leaves[curr_treeNode.partition] = curr_treeNode.score
 
-                
-
-                
                 elif curr_score != base_score:
                     print('here2')
                     continue
@@ -761,33 +654,20 @@ class ExactModel(nn.Module):
                 else:
                     base_score = curr_score
                     target_cell = self.target_cell(curr_treeNode.partition)
-                    # print('target cell', target_cell)
-                    # sys.exit()
+
 
                     for idx in target_cell:
-                        temp_partition = self.inid(curr_treeNode.partition, idx, len(target_cell))
-                        # print(temp_partition)
-                        # sys.exit()
+                        temp_partition = self.inid(curr_treeNode.partition, idx, len(target_cell), num_nodes)
                         new_info = self.infoco(data, temp_partition, device)
-                        # print(f'node {idx}: new info finihsed')
                         new_partition = self.refine(new_info, num_nodes, data, device)
-                        # new_partition = self.refine_partition(temp_partition, data.edge_index)
                         
                         one_child = TreeNode(new_partition)
-                        # score = torch.sum(self.infoco1(data, new_partition, device)).item()
                         one_child.parent = curr_treeNode
                         temp_score = curr_treeNode.score
                         temp_score.append(self.compute_essential_info(new_partition, data.edge_index, device))
-                        # print(temp_score)
                         one_child.score = temp_score
-                        # print(one_child.score)
-
                         curr_treeNode.child.append(one_child)
-
-                        # print(new_partition)
-                        # sys.exit()
                         next_layer.append(one_child)
-
 
             print(len(next_layer))
             print('======================================')
@@ -1055,7 +935,7 @@ class SiameseNetwork(nn.Module):
         if not a:
             
             # print('==================================================1')
-            # print(G_1.edges())
+            print(G_1.edges())
             # # torch.save(input1.edge_index, 'edge_index_1.pt')
             leaves_converted_1 = {key: [tensor.tolist() for tensor in value] for key, value in leaves1.items()}
             leaves_converted_2 = {key: [tensor.tolist() for tensor in value] for key, value in leaves2.items()}
@@ -1074,6 +954,12 @@ class SiameseNetwork(nn.Module):
                 # print(input1.edge_index)
                 # print(score_1)
             print('==================================================2')
+            file_name = '/home/cds/Documents/Yifan/GI_Project/find_why.txt'
+
+            # with open(file_name, "a") as file:
+                
+
+
             # print(G_2.edges())
             # # torch.save(input2.edge_index, 'edge_index_2.pt')
 
@@ -1111,22 +997,17 @@ class SiameseNetwork(nn.Module):
 
             # # Save the second graph in adjacency list format
             # nx.write_adjlist(G_2, "graph2.adjlist")
-            
-            # sys.exit()
+            sys.exit()
             return False
         # output = F.cosine_similarity(output1, output2, dim=1)
-
         # squared_differences = (output1 - output2) ** 2  # Shape: (3, 5)
-
         # output = torch.norm(output1 - output2, p=2, dim=-1)
         # output = torch.sigmoid(output)  
         # print(output)
         # sys.exit()
-        
         # indices1 = torch.stack(indices1)
         # indices2 = torch.stack(indices2)
         # print(f'twin model forward time: {time.time()-time_0}')s
-        
         return True
     
     def reset_parameters(self):
