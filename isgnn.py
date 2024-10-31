@@ -610,6 +610,7 @@ class ExactModel(nn.Module):
         return a
 
     def forward(self, data, device):
+        print('start===================================================================================')
         leaves = {}
         # print(f'number of nodes: {data.x.shape[0]}')
         # print(data.x.device)
@@ -619,7 +620,8 @@ class ExactModel(nn.Module):
         # print(data.x)
         # print(data.x.shape)
         p_0 = self.refine(data.x, num_nodes, data, device)
-
+        
+        
         root = TreeNode(p_0)
         root.score = [self.compute_essential_info(p_0, data.edge_index, device)]
         # root.score.append(torch.sum(self.infoco1(data, p_0, device)).item())
@@ -644,18 +646,24 @@ class ExactModel(nn.Module):
                     leaves[curr_treeNode.partition] = curr_treeNode.score
 
                 elif curr_score != base_score:
-                    print('here2')
+                    # print('here2')
                     continue
 
                 elif curr_score < base_score:
-                    print('here3')
+                    # print('here3')
                     continue
                 
                 else:
                     base_score = curr_score
                     target_cell = self.target_cell(curr_treeNode.partition)
+                    # print(curr_treeNode.partition)
+                    lst = []
+                    for idx, val in enumerate(curr_treeNode.partition.tolist()):
+                        lst.append((idx, val))
+                    # print(lst)
 
-
+                    # print(target_cell)
+                    
                     for idx in target_cell:
                         temp_partition = self.inid(curr_treeNode.partition, idx, len(target_cell), num_nodes)
                         new_info = self.infoco(data, temp_partition, device)
@@ -669,32 +677,37 @@ class ExactModel(nn.Module):
                         curr_treeNode.child.append(one_child)
                         next_layer.append(one_child)
 
-            print(len(next_layer))
-            print('======================================')
+            # print(len(next_layer))
+            # print('======================================')
             if len(next_layer) == 1:
                 current_layer = next_layer
             else:
                 leng = math.ceil((len(next_layer)*self.prop))
-                print(leng)
+                # print(leng)
                 current_layer = next_layer[:leng]
             next_layer = []
-        print(len(leaves))
+        # print(len(leaves))
         # print(i for i in leaves.keys())
         # print(leaves)
         # sequences = list(leaves.values())
         # idx = self.compare_sequences(sequences, data.edge_index, device)
         cl_form = self.cl_form(leaves)
-        
+
+        # print('final---------')
+        lst = []
+        for idx, val in enumerate(cl_form.tolist()):
+            lst.append((idx, val))
+        # print(lst)
+
+
+
+
         # print(f'choose leaf {idx}')
         # cl_form = list(leaves.keys())[idx]
          
         return cl_form, leaves
 
     
-
-
-
-
 
 
 class ISGNN(nn.Module):
@@ -922,7 +935,7 @@ class SiameseNetwork(nn.Module):
     def forward(self, input1, input2):
 
         time_0 = time.time()
-        print(self.device)
+        # print(self.device)
         output1, leaves1 = self.custom_network(input1, self.device)
         time_1 = time.time()
         output2, leaves2 = self.custom_network(input2, self.device)
@@ -935,7 +948,7 @@ class SiameseNetwork(nn.Module):
         if not a:
             
             # print('==================================================1')
-            print(G_1.edges())
+            # print(G_1.edges())
             # # torch.save(input1.edge_index, 'edge_index_1.pt')
             leaves_converted_1 = {key: [tensor.tolist() for tensor in value] for key, value in leaves1.items()}
             leaves_converted_2 = {key: [tensor.tolist() for tensor in value] for key, value in leaves2.items()}
@@ -956,7 +969,22 @@ class SiameseNetwork(nn.Module):
             print('==================================================2')
             file_name = '/home/cds/Documents/Yifan/GI_Project/find_why.txt'
 
-            # with open(file_name, "a") as file:
+            with open(file_name, "w") as file:
+                file.write('G_1 \n')
+                for edge in G_1.edges():
+                    file.write(str(edge) + '\n')
+                file.write('G_1 cl \n')
+                file.write(str(output1.tolist()) + '\n')
+
+
+                
+                file.write('G_2 \n')
+                for edge in G_2.edges():
+                    file.write(str(edge) + '\n')
+                file.write('G_2 cl \n')
+                file.write(str(output2.tolist()))
+
+
                 
 
 
@@ -966,32 +994,32 @@ class SiameseNetwork(nn.Module):
 
             # for (partition_1, score_1), (partition_2, score_2) in zip(leaves1.items(), leaves2.items()):
             #     print(partition_2.tolist())
-            #     # print(score_2)
+                # print(score_2)
             
-            # G_1 = nx.DiGraph()
-            # G_2 = nx.DiGraph()
-            # nodes_list = [i for i in range(100)]
-            # G_1.add_nodes_from(nodes_list)
-            # G_2.add_nodes_from(nodes_list)
+            G_1 = nx.DiGraph()
+            G_2 = nx.DiGraph()
+            nodes_list = [i for i in range(100)]
+            G_1.add_nodes_from(nodes_list)
+            G_2.add_nodes_from(nodes_list)
 
-            # edges1 = input1.edge_index.t().tolist()  # Transpose and convert to list of edges
-            # G_1.add_edges_from(edges1)
+            edges1 = input1.edge_index.t().tolist()  # Transpose and convert to list of edges
+            G_1.add_edges_from(edges1)
 
-            # edges2 = input2.edge_index.t().tolist()  # Transpose and convert to list of edges
-            # G_2.add_edges_from(edges2)
+            edges2 = input2.edge_index.t().tolist()  # Transpose and convert to list of edges
+            G_2.add_edges_from(edges2)
 
-            # cl_lst = output1.tolist()
-            # cl_2_lst = output2.tolist()
-
-
-            # # label_1 = {}
-            # # label_2 = {}
-            # # for i in range(len(output1)):
-            # #     label_1[i] = cl_lst[i]
-            # #     label_2[i] = cl_2_lst[i]
+            cl_lst = output1.tolist()
+            cl_2_lst = output2.tolist()
 
 
-            # # draw_two_graphs(G_1, G_2, label_1, label_2)
+            label_1 = {}
+            label_2 = {}
+            for i in range(len(output1)):
+                label_1[i] = cl_lst[i]
+                label_2[i] = cl_2_lst[i]
+
+
+            draw_two_graphs(G_1, G_2, label_1, label_2)
             # # Save the first graph in adjacency list format
             # nx.write_adjlist(G_1, "graph1.adjlist")
 

@@ -414,18 +414,18 @@ def draw_two_graphs(graph1, graph2, labels1=None, labels2=None, title1="Graph 1"
     pos1 = nx.spring_layout(graph1)
     pos2 = nx.spring_layout(graph2)
 
-    nx.draw(graph1, pos1, with_labels=True, labels={node: node for node in graph1.nodes()}, node_color='lightblue', node_size=500, font_size=10, font_color='black', edge_color='gray', ax=ax1)
+    nx.draw(graph1, pos1, with_labels=True, labels={node: node for node in graph1.nodes()}, node_color='lightblue', node_size=5, font_size=5, font_color='black', edge_color='gray', ax=ax1)
     if labels1:
         labels_pos1 = {node: (pos1[node][0], pos1[node][1] + 0.1) for node in pos1}
-        nx.draw_networkx_labels(graph1, labels_pos1, labels=labels1, font_size=12, font_color='red', ax=ax1)
+        nx.draw_networkx_labels(graph1, labels_pos1, labels=labels1, font_size=5, font_color='red', ax=ax1)
     ax1.set_title(title1)
 
-    nx.draw(graph2, pos2, with_labels=True, labels={node: node for node in graph2.nodes()}, node_color='lightgreen', node_size=500, font_size=10, font_color='black', edge_color='gray', ax=ax2)
+    nx.draw(graph2, pos2, with_labels=True, labels={node: node for node in graph2.nodes()}, node_color='lightgreen', node_size=5, font_size=5, font_color='black', edge_color='gray', ax=ax2)
     if labels2:
         labels_pos2 = {node: (pos2[node][0], pos2[node][1] + 0.1) for node in pos2}
-        nx.draw_networkx_labels(graph2, labels_pos2, labels=labels2, font_size=12, font_color='red', ax=ax2)
+        nx.draw_networkx_labels(graph2, labels_pos2, labels=labels2, font_size=5, font_color='red', ax=ax2)
     ax2.set_title(title2)
-    plt.savefig('/home/cds/Documents/Yifan/ICLR25/self_generated_2_exact.pdf', format='pdf')
+    plt.savefig('/home/cds/Documents/Yifan/GI_Project/self_generated_2_exact.pdf', format='pdf')
     # plt.show()
 
 
