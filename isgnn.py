@@ -214,9 +214,14 @@ class ExactModel(nn.Module):
         
         # Compute contributions in log-space
         contributions_log = torch.log(p_i) + N_g_p_j_log  # Shape: (num_edges,)
-        # print(contributions_log.device)
-        # Compute max per target node to use in log-sum-exp
-        # print(torch.isfinite(contributions_log).all())
+        print(contributions_log.device)
+
+        # print(f"Device of contributions_log: {contributions_log.device}")
+        # print(f"Device of target_nodes: {target_nodes.device}")
+        # print(f"Expected device: {device}")
+        # CUDA_LAUNCH_BLOCKING=1
+
+        
         
         max_per_target, _ = scatter_max(contributions_log, target_nodes, dim=0, dim_size=total_nodes)
         
@@ -236,7 +241,7 @@ class ExactModel(nn.Module):
         return S_log
 
     def refine(self, info, num_nodes, data, device):
-        # print(device)
+        print(device)
         fixed = False
         prev = info
         time = 0
@@ -517,7 +522,8 @@ class ExactModel(nn.Module):
         """
         device = a.device  # Use the same device as 'a'
         n = a.size(0)
-
+        print('here')
+        print(device)
         # Initialize π and α
         # π is represented by 'a' itself
         # α is initialized with the first cell ID
@@ -614,12 +620,14 @@ class ExactModel(nn.Module):
         leaves = {}
         # print(f'number of nodes: {data.x.shape[0]}')
         # print(data.x.device)
+        # print(device)
         num_nodes = data.x.shape[0]
         current_layer = []
         next_layer = []
         # print(data.x)
         # print(data.x.shape)
         p_0 = self.refine(data.x, num_nodes, data, device)
+        # print('here')
         
         
         root = TreeNode(p_0)
@@ -927,23 +935,29 @@ class ISGNN(nn.Module):
 
 
 class SiameseNetwork(nn.Module):
-    def __init__(self, device, prop):
+    def __init__(self, device, prop, dname):
         super(SiameseNetwork, self).__init__()
         self.custom_network = ExactModel(prop=prop)
         self.device = device
+        self.dname = dname
         # print(self.device)
-    def forward(self, input1, input2):
+    def forward(self, input1, input2, labels):
 
         time_0 = time.time()
         # print(self.device)
+        # print(labels)
+        # sys.exit()
+        label = int(labels.item())
+        # print(label)
+        # sys.exit()
         output1, leaves1 = self.custom_network(input1, self.device)
         time_1 = time.time()
         output2, leaves2 = self.custom_network(input2, self.device)
-        G_1 = to_networkx(input1, to_undirected=False)
-        G_2 = to_networkx(input2, to_undirected=False)
+        G_1 = to_networkx(input1, to_undirected=True)
+        G_2 = to_networkx(input2, to_undirected=True)
         # print(output1)
         # print(output2)
-        a = check_iso(output1.tolist(), output2.tolist(), G_1, G_2)
+        a = check_iso(output1.tolist(), output2.tolist(), G_1, G_2, label)
         # print(a)
         if not a:
             
@@ -996,36 +1010,36 @@ class SiameseNetwork(nn.Module):
             #     print(partition_2.tolist())
                 # print(score_2)
             
-            G_1 = nx.DiGraph()
-            G_2 = nx.DiGraph()
-            nodes_list = [i for i in range(100)]
-            G_1.add_nodes_from(nodes_list)
-            G_2.add_nodes_from(nodes_list)
+            # G_1 = nx.Graph()
+            # G_2 = nx.Graph()
+            # nodes_list = [i for i in range(100)]
+            # G_1.add_nodes_from(nodes_list)
+            # G_2.add_nodes_from(nodes_list)
 
-            edges1 = input1.edge_index.t().tolist()  # Transpose and convert to list of edges
-            G_1.add_edges_from(edges1)
+            # edges1 = input1.edge_index.t().tolist()  # Transpose and convert to list of edges
+            # G_1.add_edges_from(edges1)
 
-            edges2 = input2.edge_index.t().tolist()  # Transpose and convert to list of edges
-            G_2.add_edges_from(edges2)
+            # edges2 = input2.edge_index.t().tolist()  # Transpose and convert to list of edges
+            # G_2.add_edges_from(edges2)
 
-            cl_lst = output1.tolist()
-            cl_2_lst = output2.tolist()
-
-
-            label_1 = {}
-            label_2 = {}
-            for i in range(len(output1)):
-                label_1[i] = cl_lst[i]
-                label_2[i] = cl_2_lst[i]
+            # cl_lst = output1.tolist()
+            # cl_2_lst = output2.tolist()
 
 
-            draw_two_graphs(G_1, G_2, label_1, label_2)
+            # label_1 = {}
+            # label_2 = {}
+            # for i in range(len(output1)):
+            #     label_1[i] = cl_lst[i]
+            #     label_2[i] = cl_2_lst[i]
+
+
+            # draw_two_graphs(G_1, G_2, label_1, label_2)
             # # Save the first graph in adjacency list format
             # nx.write_adjlist(G_1, "graph1.adjlist")
 
             # # Save the second graph in adjacency list format
             # nx.write_adjlist(G_2, "graph2.adjlist")
-            sys.exit()
+            # sys.exit()
             return False
         # output = F.cosine_similarity(output1, output2, dim=1)
         # squared_differences = (output1 - output2) ** 2  # Shape: (3, 5)

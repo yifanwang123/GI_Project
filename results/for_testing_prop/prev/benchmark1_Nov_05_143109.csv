@@ -1,4 +1,4 @@
-For testing,self_generated_data_2
+For testing,benchmark1
 0.01,2,8,10,5,5
-7,4,9,6,12
+1,10,8,13,13
 run,prop,test_acc,run_duration

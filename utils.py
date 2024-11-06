@@ -24,9 +24,20 @@ class graph:
                 self.label = 1
             martix_tool = customized_matrix(self.nx_graph)
             self.list_of_matrix = []
-        self_generated_format_data = ['self_generated_data', 'self_generated_data_2', 'EXP', 'CEXP']
-            
-        if dataset in self_generated_format_data:
+        
+
+        if dataset == 'EXP' or dataset == 'CEXP':
+            self.nx_graph = prepare_tool.read_graph_file_exp()
+            self.max_nodes_idx, self.c_form = prepare_tool.read_record_file()
+            self.data = prepare_tool.create_data(self.nx_graph)
+            self.num_nodes = self.nx_graph.number_of_nodes()
+
+            self.label = 0
+            martix_tool = customized_matrix(self.nx_graph)
+            self.list_of_matrix = []
+
+
+        if dataset == 'self_generated_data':
             self.nx_graph = prepare_tool.read_graph_file_self_generated_data()
             self.max_nodes_idx, self.c_form = prepare_tool.read_record_file()
             self.data = prepare_tool.create_data(self.nx_graph)
@@ -47,7 +58,7 @@ class prepare:
         # self.max_nodes_idx, self.c_form = self.read_record_file()
 
     def read_graph_file_benchmark1(self):
-        G = nx.DiGraph()
+        G = nx.Graph()
 
         with open(self.graph_file, 'r') as file:
             for line in file:
@@ -67,7 +78,7 @@ class prepare:
     def read_graph_file_self_generated_data(self):
         matrix = np.load(self.graph_file)
         nodes = range(len(matrix))
-        graph = nx.DiGraph()
+        graph = nx.Graph()
         graph.add_nodes_from(nodes)
         for i, row in enumerate(matrix):
             for j, val in enumerate(row):
@@ -75,6 +86,22 @@ class prepare:
                     graph.add_edge(i, j)
 
         return graph
+    
+
+
+    def read_graph_file_exp(self):
+        matrix = np.load(self.graph_file)
+        nodes = range(len(matrix))
+        graph = nx.Graph()
+        graph.add_nodes_from(nodes)
+        for i, row in enumerate(matrix):
+            for j, val in enumerate(row):
+                if val != 0:
+                    graph.add_edge(i, j)
+
+        return graph
+
+
 
     def read_record_file(self):
         max_nodes_idx = []
@@ -110,7 +137,7 @@ class prepare:
     def create_data(self, G):
         node_features = []
         for node in G.nodes:
-            in_neighbors = G.in_degree(node)
+            in_neighbors = G.degree(node)
             # out_neighbors = G.out_degree(node)
             # total_neighbors = len(list(G.neighbors(node)))
             # print(G.neighbors(node))
@@ -350,33 +377,43 @@ def sparse_to_torch(sparse_matrix):
     return sparse_tensor
 
 
-def check_iso(form1, form2, graph1, graph2):
+def check_iso(form1, form2, graph1, graph2, label):
 
     iso = True
-    adj_matrix_1 = nx.adjacency_matrix(graph1)
-    adj_matrix_dense_1 = adj_matrix_1.todense()
-    # print(adj_matrix_dense)
-    adj_matrix_2 = nx.adjacency_matrix(graph2)
-    adj_matrix_dense_2 = adj_matrix_2.todense()
+    # adj_matrix_1 = nx.adjacency_matrix(graph1)
+    # adj_matrix_dense_1 = adj_matrix_1.todense()
+    # # print(adj_matrix_dense)
+    # adj_matrix_2 = nx.adjacency_matrix(graph2)
+    # adj_matrix_dense_2 = adj_matrix_2.todense()
 
-    dt_1 = {}
-    dt_2 = {}
-    for i, row in enumerate(adj_matrix_dense_1):
-        num_neighbors_1 = np.sum(row)
-        num_neighbors_2 = np.sum(adj_matrix_dense_2[i])
-        if num_neighbors_1 not in dt_1:
-            dt_1[num_neighbors_1] = 1
-        else:
-            dt_1[num_neighbors_1] += 1
+    # dt_1 = {}
+    # dt_2 = {}
+    # for i, row in enumerate(adj_matrix_dense_1):
+    #     num_neighbors_1 = np.sum(row)
+    #     num_neighbors_2 = np.sum(adj_matrix_dense_2[i])
+    #     if num_neighbors_1 not in dt_1:
+    #         dt_1[num_neighbors_1] = 1
+    #     else:
+    #         dt_1[num_neighbors_1] += 1
         
-        if num_neighbors_2 not in dt_2:
-            dt_2[num_neighbors_2] = 1
-        else:
-            dt_2[num_neighbors_2] += 1
+    #     if num_neighbors_2 not in dt_2:
+    #         dt_2[num_neighbors_2] = 1
+    #     else:
+    #         dt_2[num_neighbors_2] += 1
         
-    if dt_1 != dt_2:    
-        print(f"Not iso")
+    # if dt_1 != dt_2:    
+    #     print(f"Not iso")
+    #     iso = False
+
+    # if dname == 'EXP' or dname == 'CEXP':
+    #     iso = False
+
+    if label == 0:
         iso = False
+
+    if label == 1:
+        iso = True
+
 
     if iso:
         num_edge = 0

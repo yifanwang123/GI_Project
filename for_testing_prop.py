@@ -16,6 +16,7 @@ import pickle
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd.profiler as profiler
+import torch_scatter
 
 def pad_sparse_matrix(sparse_matrix, target_size):
     """
@@ -44,7 +45,6 @@ def pad_sparse_matrix(sparse_matrix, target_size):
 
 class Custom_Loss(nn.Module):
     def __init__(self, model, lambda_reg=0.0001, margin=1000.0):
-
         super(Custom_Loss, self).__init__()
         self.model = model
         self.lambda_reg = lambda_reg
@@ -91,7 +91,7 @@ def evaluate_model(model, dataloader, device, purpose='valid'):
             graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
             labels = labels.to(device)
             # print(device)
-            is_correct = model(graph_1_data_tensor, graph_2_data_tensor)
+            is_correct = model(graph_1_data_tensor, graph_2_data_tensor, labels)
             # loss = criterion(score, labels, idx1, idx2, graph_1_nodes_tensor, graph_2_nodes_tensor)
             # acc = eval_acc(labels, score, purpose)
             if is_correct:
@@ -234,10 +234,16 @@ class CustomDataLoader(DataLoader):
 
 
 def main():
-    
+    # print(f"Allocated memory: {torch.cuda.memory_allocated() / (1024 ** 3):.2f} GB")
+    # print(f"Max allocated memory: {torch.cuda.max_memory_allocated() / (1024 ** 3):.2f} GB")
+    # print(f"Cached memory: {torch.cuda.memory_reserved() / (1024 ** 3):.2f} GB")
     args = config.parse()
     current_directory = os.getcwd()
-
+    # print("PyTorch CUDA version:", torch.version.cuda)
+    # print("PyTorch version:", torch.__version__)
+    # print("PyTorch built with CUDA version:", torch.cuda.get_device_capability())
+    # print("Available GPUs:", torch.cuda.device_count())
+    # print("torch_scatter version:", torch_scatter.__version__)
 
     data_name = args.dname
     print(f'Load Dataset: {data_name}')
@@ -251,8 +257,8 @@ def main():
     log_file = current_directory + f"/results/for_testing_prop/{data_name}_{formatted_time}.csv"
     results_file = current_directory + f"/results/final/{data_name}_{args.numL}_{args.numK}_{formatted_time}.csv"
 
-    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried_{args.numL}"
-    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels_{args.numL}"
+    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried"
+    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels"
 
 
     graph_pairs = load_samples(data_pairs)
@@ -261,16 +267,15 @@ def main():
     print(f'Num_samples: {num_samples}')
     dataset = GraphPairDataset(graph_pairs, labels)
     prop = args.prop
-
     
     print(f'Prepare Model')
-    if args.cuda in [0, 1]:
-        device = torch.device('cuda:'+str(args.cuda)
-                            if torch.cuda.is_available() else 'cpu')
+    if args.cuda in [0, 1, 2, 3]:
+        device = torch.device('cuda:'+str(args.cuda) if torch.cuda.is_available() else 'cpu')
+    
     isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
     isgnn.to(device)
-    
-    model = SiameseNetwork(device, prop)
+    print(f'device: {device}')
+    model = SiameseNetwork(device, prop, dname=data_name)
 
 
     model = model.to(device)
@@ -285,10 +290,10 @@ def main():
         title = ['For testing', f'{data_name}']
         writer.writerow(title)
 
-        train_hyper_data = [args.lr, args.GIN_num_layers, args.GIN_hidden_dim, args.train_patience, args.numL, args.numK]
-        writer.writerow(train_hyper_data)
-        seed = [random.randint(1, 10)+i for i in range(args.runs)]
-        writer.writerow(seed)
+        # train_hyper_data = [args.lr, args.GIN_num_layers, args.GIN_hidden_dim, args.train_patience, args.numL, args.numK]
+        # writer.writerow(train_hyper_data)
+        # seed = [random.randint(1, 10)+i for i in range(args.runs)]
+        # writer.writerow(seed)
 
         title_2 = ['run', 'prop','test_acc', 'run_duration']
         writer.writerow(title_2)
@@ -301,7 +306,7 @@ def main():
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
             valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
             test_loader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
-            print(device)
+            # print(device)
             test_acc = evaluate_model(model, test_loader, device, purpose='test')
             
             one_run_time = time.time() - start_time

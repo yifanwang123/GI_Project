@@ -49,14 +49,14 @@ def save_labels(labels_list, filename):
         pickle.dump(labels_list, f)
 
 
-def save_benchmark_1(L):
+def save_benchmark_1():
 
-    print(L)
+    # print(L)
     current_directory = os.getcwd()
     data_name = 'benchmark1'
     data_raw_dir = current_directory + f"/data/{data_name}/samples_raw"
-    data_pairs = current_directory + f"/data/{data_name}/{data_name}_processed_paried_{L}"
-    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels_{L}"
+    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried"
+    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels"
 
     graph_pairs = []
     labels = []
@@ -71,7 +71,7 @@ def save_benchmark_1(L):
             r2_path = g2_path + "_record.txt"
             graph_2 = graph(g2_path, r2_path)
             
-            numL = L
+            numL = 10
             idx1 = adjust_list(graph_1.max_nodes_idx, numL)
             idx2 = adjust_list(graph_2.max_nodes_idx, numL)
             one_sample = (graph_1.data, graph_2.data, graph_1.list_of_matrix, graph_2.list_of_matrix, idx1, idx2)
@@ -152,5 +152,5 @@ def save_benchmark_1(L):
 
 # save_self_generated()
 
-save_benchmark_1(5)
+save_benchmark_1()
 
