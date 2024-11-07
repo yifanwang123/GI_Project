@@ -274,7 +274,7 @@ def main():
     
     isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
     isgnn.to(device)
-    print(f'device: {device}')
+    # print(f'device: {device}')
     model = SiameseNetwork(device, prop, dname=data_name)
 
 

@@ -14,7 +14,7 @@ prop=0.2
 
 if [ "$method" = "GIN" ]; then
     echo =============
-    CUDA_VISIBLE_DEVICES=2 python for_testing_prop.py \
+    CUDA_VISIBLE_DEVICES=1 python for_testing_prop.py \
         --dname $dname \
         --GIN_num_layers $GIN_num_layers \
         --GIN_hidden_dim $GIN_hidden_dim \

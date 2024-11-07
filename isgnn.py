@@ -214,7 +214,7 @@ class ExactModel(nn.Module):
         
         # Compute contributions in log-space
         contributions_log = torch.log(p_i) + N_g_p_j_log  # Shape: (num_edges,)
-        print(contributions_log.device)
+        # print(contributions_log.device)
 
         # print(f"Device of contributions_log: {contributions_log.device}")
         # print(f"Device of target_nodes: {target_nodes.device}")
@@ -241,7 +241,7 @@ class ExactModel(nn.Module):
         return S_log
 
     def refine(self, info, num_nodes, data, device):
-        print(device)
+        # print(device)
         fixed = False
         prev = info
         time = 0
@@ -522,8 +522,8 @@ class ExactModel(nn.Module):
         """
         device = a.device  # Use the same device as 'a'
         n = a.size(0)
-        print('here')
-        print(device)
+        # print('here')
+        # print(device)
         # Initialize π and α
         # π is represented by 'a' itself
         # α is initialized with the first cell ID
@@ -616,7 +616,7 @@ class ExactModel(nn.Module):
         return a
 
     def forward(self, data, device):
-        print('start===================================================================================')
+        # print('start===================================================================================')
         leaves = {}
         # print(f'number of nodes: {data.x.shape[0]}')
         # print(data.x.device)
@@ -980,23 +980,23 @@ class SiameseNetwork(nn.Module):
 
                 # print(input1.edge_index)
                 # print(score_1)
-            print('==================================================2')
-            file_name = '/home/cds/Documents/Yifan/GI_Project/find_why.txt'
+            # print('==================================================2')
+            # file_name = '/home/cds/Documents/Yifan/GI_Project/find_why.txt'
 
-            with open(file_name, "w") as file:
-                file.write('G_1 \n')
-                for edge in G_1.edges():
-                    file.write(str(edge) + '\n')
-                file.write('G_1 cl \n')
-                file.write(str(output1.tolist()) + '\n')
+            # with open(file_name, "w") as file:
+            #     file.write('G_1 \n')
+            #     for edge in G_1.edges():
+            #         file.write(str(edge) + '\n')
+            #     file.write('G_1 cl \n')
+            #     file.write(str(output1.tolist()) + '\n')
 
 
                 
-                file.write('G_2 \n')
-                for edge in G_2.edges():
-                    file.write(str(edge) + '\n')
-                file.write('G_2 cl \n')
-                file.write(str(output2.tolist()))
+            #     file.write('G_2 \n')
+            #     for edge in G_2.edges():
+            #         file.write(str(edge) + '\n')
+            #     file.write('G_2 cl \n')
+            #     file.write(str(output2.tolist()))
 
 
                 
