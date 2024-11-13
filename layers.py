@@ -328,3 +328,59 @@ class DynamicTrainableStepFunctionF5_batch(nn.Module):
             start_idx = end_idx
 
         return output
+    
+
+
+class LocalInfo(MessagePassing):
+    def __init__(self, in_channels):
+        super(LocalInfo, self).__init__(aggr='add')  # Use "add" aggregation
+        # Initialize the learnable weights w_v for each node
+
+        self.mlp = nn.Sequential(
+            nn.Linear(in_channels, 1),
+            nn.Sigmoid()  # Ensure w_v is between 0 and 1
+        )
+
+    def forward(self, x, edge_index):
+        # Aggregate messages
+        out = self.propagate(edge_index, x=x)
+        # Add self-loop messages
+        out = x + out
+        # Compute w_v for each node
+        w_v = self.mlp(x)
+        # Multiply by the learnable weight w_v
+        out = w_v * out
+        return out
+
+    def message(self, x_j):
+        return x_j
+    
+
+
+class ValueFrequencyAttention(nn.Module):
+    def __init__(self):
+        super(ValueFrequencyAttention, self).__init__()
+    
+    def forward(self, node_values):
+        """
+        node_values: Tensor of shape [num_nodes], representing the value of each node
+        """
+        num_nodes = node_values.size(0)
+        
+        # Ensure node_values are integers if they are categorical labels
+        # If node_values are not integers, map them to integers
+        
+        # Step 1: Compute value counts using torch.bincount
+        unique_values, inverse_indices = torch.unique(node_values, return_inverse=True)
+        value_counts = torch.bincount(inverse_indices)
+        
+        # Step 2: Map counts back to nodes
+        frequencies = value_counts[inverse_indices]
+        
+        # Step 3: Normalize frequencies to (0, 1)
+        frequencies = frequencies.float()
+        frequencies = frequencies / frequencies.max()
+        frequencies = frequencies.clamp(min=0.0, max=1.0)
+        
+        return frequencies
+

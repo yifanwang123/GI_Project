@@ -10,13 +10,15 @@ from torch_geometric.utils import softmax
 import matplotlib.pyplot as plt
 import networkx as nx
 import sys
-from layers import GINModel, InfoCollect, IndiiLayer, TrainableHardThreshold, DynamicTrainableStepFunctionF5, DynamicTrainableStepFunctionF5_batch
+from layers import GINModel, InfoCollect, IndiiLayer, TrainableHardThreshold, DynamicTrainableStepFunctionF5, DynamicTrainableStepFunctionF5_batch, LocalInfo
 from torch_geometric.data import Data
 import time
 # import torch_scatter
 from torch_scatter import scatter_add, scatter_max
 from torch_geometric.utils import add_self_loops, to_networkx
 from utils import check_iso, draw_two_graphs
+from collections import Counter
+
 
 
 class TreeNode(object):
@@ -592,7 +594,7 @@ class ExactModel(nn.Module):
                 next_cell_id += num_fragments
 
                 # Update 'a' for nodes in X
-                a[X_nodes] = new_cell_ids[counts_inv]
+                a[X_nodes] = new_cell_ids[counts_inv].unsqueeze(1)
 
                 # Update α
                 if X_cell_id in alpha:
@@ -626,7 +628,9 @@ class ExactModel(nn.Module):
         next_layer = []
         # print(data.x)
         # print(data.x.shape)
-        p_0 = self.refine(data.x, num_nodes, data, device)
+        # p_0 = self.refine(data.x, num_nodes, data, device)
+
+        p_0 = self.refine_partition(data.x, data.edge_index)
         # print('here')
         
         
@@ -650,7 +654,7 @@ class ExactModel(nn.Module):
             for curr_treeNode in current_layer:
                 curr_score = curr_treeNode.score
                 node_in_current_layer += 1
-                if self.is_discrete(curr_treeNode.partition):
+                if self.is_discrete(curr_treeNode.partition.squeeze()):
                     leaves[curr_treeNode.partition] = curr_treeNode.score
 
                 elif curr_score != base_score:
@@ -663,7 +667,7 @@ class ExactModel(nn.Module):
                 
                 else:
                     base_score = curr_score
-                    target_cell = self.target_cell(curr_treeNode.partition)
+                    target_cell = self.target_cell(curr_treeNode.partition.squeeze())
                     # print(target_cell)
                     lst = []
                     for idx, val in enumerate(curr_treeNode.partition.tolist()):
@@ -673,10 +677,10 @@ class ExactModel(nn.Module):
                     # print(target_cell)
                     
                     for idx in target_cell:
-                        temp_partition = self.inid(curr_treeNode.partition, idx, len(target_cell), num_nodes)
-                        new_info = self.infoco(data, temp_partition, device)
-                        new_partition = self.refine(new_info, num_nodes, data, device)
-                        
+                        temp_partition = self.inid(curr_treeNode.partition.squeeze(), idx, len(target_cell), num_nodes)
+                        # new_info = self.infoco(data, temp_partition, device)
+                        # new_partition = self.refine(new_info, num_nodes, data, device)
+                        new_partition = self.refine_partition(temp_partition.unsqueeze(1), data.edge_index)
                         one_child = TreeNode(new_partition)
                         one_child.parent = curr_treeNode
                         temp_score = curr_treeNode.score
@@ -716,6 +720,7 @@ class ExactModel(nn.Module):
         return cl_form, leaves
 
     
+
 
 
 class ISGNN(nn.Module):
@@ -930,6 +935,122 @@ class ISGNN(nn.Module):
 #                 print(f"Warning: {name} is a scalar parameter with value {param.item()}. Skipping initialization.")
 #             else:
 #                 raise ValueError(f"Unexpected parameter '{name}' with dimension {param.dim()} and shape {param.shape}")
+
+
+
+
+
+class approxGNN(nn.Module):
+    def __init__(self, device, hyperpara1, hyperpara2, local_in, local_out, dname):
+        super(approxGNN, self).__init__()
+        self.hyper1 = hyperpara1
+        self.hyper2 = hyperpara2
+        self.device = device
+        self.dname = dname
+        self.k = 1000
+        self.epsilon = 5
+        self.local = InfoCollect(local_in, local_out)
+
+
+    def find_nodes_with_most_common_label(self, partition):
+        """
+        Finds the indexes of nodes whose partition label is the most common.
+
+        Args:
+            partition (list or array-like): A list of partition labels for each node.
+
+        Returns:
+            list: A list of node indexes with the most common partition label.
+        """
+ 
+
+        # Step 1: Count the occurrences of each partition label
+        label_counts = Counter(partition)
+
+        # Step 2: Identify the most common partition label
+        most_common_label, max_count = label_counts.most_common(1)[0]
+
+        # Step 3: Find the node indexes with the most common label
+        node_indexes = [index for index, label in enumerate(partition) if label == most_common_label]
+
+        return node_indexes
+
+    def generate_one_hot_vectors(self, indices, n):
+        """
+        Generates a list of one-hot tensors, one for each index in 'indices'.
+
+        Args:
+            indices (list or array-like): List of indices for which to generate one-hot vectors.
+            n (int): Size of each one-hot vector (number of nodes).
+
+        Returns:
+            list of torch.Tensor: A list where each element is a one-hot tensor of size [n] with a single 1 at index i.
+        """
+        one_hot_vectors = []
+        for i in indices:
+            a = torch.zeros(n)
+            a[i] = 1
+            one_hot_vectors.append(a)
+        return one_hot_vectors
+
+
+
+    def refine(self, info, data):
+        # print(device)
+        fixed = False
+        edge_index = data.edge_index
+        num_nodes = data.x.shape[0]
+        time = 0
+        while not fixed and time <= self.hyper1:
+            X = self.local(info, edge_index).view(-1, 1)
+            print(X)
+            print(X.shape)
+            D = X - X.T
+            D_1 = CustomSignFunction.apply(D, self.k, self.epsilon)
+            D = D_1.sum(dim=1, keepdim=True)
+            new_p = self.f5(D, num_nodes).squeeze()
+
+            if torch.equal(new_p, prev):
+                fixed = True
+            else:
+                prev = new_p
+            time += 1
+        new_p = new_p.squeeze()
+        return new_p
+
+
+
+
+    def forward(self, data):
+        num_nodes = data.x.shape[0]
+        p_0 = self.refine(data.x, data)
+
+        indi_one_hot = self.generate_one_hot_vectors(self.find_nodes_with_most_common_label(p_0), num_nodes)
+
+        candidate = []
+        for i in range(num_nodes):
+            for indi_vector in indi_one_hot[:int(self.hyper2*len(indi_one_hot))]:
+                p_tempt = p_0 + indi_vector
+                p_current = self.refine(p_tempt, data)
+                candidate.append(p_current)
+
+
+
+
+
+
+
+
+
+        
+        
+
+
+
+
+
+
+
 
 
 
