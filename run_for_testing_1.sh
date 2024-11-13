@@ -10,7 +10,7 @@ cuda=0
 reg_lambda=0.001
 runs=5
 epochs=500
-prop=0.2
+prop=0.5
 
 if [ "$method" = "GIN" ]; then
     echo =============

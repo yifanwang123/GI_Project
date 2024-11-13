@@ -90,13 +90,13 @@ def save_labels(labels_list, filename):
 
 
 
-def save_self_generated(L, data_name):
+def save_self_generated(data_name):
     
     current_directory = os.getcwd()
     # data_name = 'EXP'
     data_raw_dir = current_directory + f"/data/{data_name}/samples_raw"
-    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried_{L}"
-    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels_{L}"
+    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried"
+    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels"
 
     self_generated_format_data = ['self_generated_data', 'self_generated_data_2', 'EXP', 'CEXP']
 
@@ -116,7 +116,7 @@ def save_self_generated(L, data_name):
                 r2_path = g2_path.replace('.npy', '_record.txt')
                 graph_2 = graph(g2_path, r2_path, dataset=data_name)
                 
-                numL = L
+                numL = 10
                 idx1 = adjust_list(graph_1.max_nodes_idx, numL)
                 # print(len(idx1))
                 # sys.exit()
@@ -138,7 +138,7 @@ def save_self_generated(L, data_name):
                 r2_path = g2_path + "_record.txt"
                 graph_2 = graph(g2_path, r2_path, dataset=data_name)
                 
-                numL = L
+                numL = 10
                 idx1 = adjust_list(graph_1.max_nodes_idx, numL)
                 # print(len(idx1))
                 # sys.exit()
@@ -159,7 +159,8 @@ def save_self_generated(L, data_name):
 
 
 data_name = 'self_generated_data'
-save_self_generated(5, data_name)
+# num_nodes =100
+save_self_generated(data_name)
 
 # save_benchmark_1()
 

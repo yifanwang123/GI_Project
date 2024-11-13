@@ -664,7 +664,7 @@ class ExactModel(nn.Module):
                 else:
                     base_score = curr_score
                     target_cell = self.target_cell(curr_treeNode.partition)
-                    # print(curr_treeNode.partition)
+                    # print(target_cell)
                     lst = []
                     for idx, val in enumerate(curr_treeNode.partition.tolist()):
                         lst.append((idx, val))
@@ -685,7 +685,7 @@ class ExactModel(nn.Module):
                         curr_treeNode.child.append(one_child)
                         next_layer.append(one_child)
 
-            # print(len(next_layer))
+            print(len(next_layer))
             # print('======================================')
             if len(next_layer) == 1:
                 current_layer = next_layer

@@ -280,9 +280,16 @@ def main():
 
     model = model.to(device)
     
+
     train_size = int(args.train_prop * num_samples)
     valid_size = int(args.valid_prop * num_samples)
     test_size = num_samples - train_size - valid_size
+
+
+    # train_size = 1
+    # # print(train_size)
+    # valid_size = num_samples - 2
+    # test_size = 1
 
     runtime_list = []
     with open(log_file, mode='w', newline='') as file:
@@ -303,8 +310,9 @@ def main():
             start_time = time.time()
 
             train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_size, valid_size, test_size])
-            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
-            valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
+            # train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
+            # valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
+
             test_loader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
             # print(device)
             test_acc = evaluate_model(model, test_loader, device, purpose='test')
