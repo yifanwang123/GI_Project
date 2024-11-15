@@ -3,9 +3,12 @@ import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing, SAGEConv, GINConv
+from torch_geometric.nn import MessagePassing, SAGEConv, GINConv, GATConv
 from torch_geometric.utils import to_dense_adj
 import torch_geometric.nn as pyg_nn
+
+from torch_geometric.utils import softmax
+from torch.nn import LeakyReLU
 
 
 class MLP(torch.nn.Module):
@@ -61,14 +64,76 @@ class GINModel(torch.nn.Module):
 
 
 
+class GATNet(nn.Module):
+    def __init__(self, in_channels, out_channels, hidden_channels=8, num_heads=8, dropout=0.6):
+        super(GATNet, self).__init__()
+        self.dropout = dropout
+
+        # First GAT layer (multi-head)
+        self.gat1 = GATConv(
+            in_channels=in_channels,
+            out_channels=hidden_channels,
+            heads=num_heads,
+            dropout=dropout,
+            concat=True  # Concatenate heads' outputs
+        )
+
+        # Second GAT layer (single head)
+        self.gat2 = GATConv(
+            in_channels=hidden_channels * num_heads,
+            out_channels=out_channels,
+            heads=1,
+            dropout=dropout,
+            concat=False  # Do not concatenate since heads=1
+        )
+
+    def forward(self, x, edge_index):
+        # Apply dropout to input features
+        x = F.dropout(x, p=self.dropout, training=self.training)
+        
+        # First GAT layer with activation function
+        x = self.gat1(x, edge_index)
+        x = F.elu(x)
+
+        # Apply dropout
+        x = F.dropout(x, p=self.dropout, training=self.training)
+
+        # Second GAT layer
+        x = self.gat2(x, edge_index)
+
+        return F.log_softmax(x, dim=1)
+
+
+
+
+
+
+class FixedWeightMessagePassing(MessagePassing):
+    def __init__(self, in_channels, out_channels):
+        super(FixedWeightMessagePassing, self).__init__(aggr='add')  # 'add' aggregation
+        # Initialize a fixed weight matrix
+        self.fixed_weight = torch.nn.Parameter(
+            torch.ones(out_channels, in_channels), requires_grad=False
+        )
+
+    def forward(self, x, edge_index):
+        # x: Node feature matrix [num_nodes, in_channels]
+        # edge_index: Graph connectivity [2, num_edges]
+        return self.propagate(edge_index, x=x)
+
+    def message(self, x_j):
+        # x_j: Feature matrix of neighboring nodes
+        # Apply the fixed weight transformation
+        return F.linear(x_j, self.fixed_weight)
+
 
 class InfoCollect(MessagePassing):
     def __init__(self, in_channels, out_channels):
         super(InfoCollect, self).__init__(aggr='add')  # Sum aggregator
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = nn.Parameter(torch.Tensor(in_channels, out_channels))
-        self.attention = nn.Parameter(torch.Tensor(in_channels, 1))
+        self.weight = nn.Parameter(torch.Tensor(1, 1))
+        self.attention = nn.Parameter(torch.Tensor(1, 1))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -76,6 +141,7 @@ class InfoCollect(MessagePassing):
         nn.init.xavier_uniform_(self.attention)
 
     def forward(self, x, edge_index):
+        # print(x.shape)
         if x.dim() == 1:
             x = x.unsqueeze(-1)
         return self.propagate(edge_index, x=x)
@@ -86,11 +152,20 @@ class InfoCollect(MessagePassing):
 
         # Compute attention score based only on the target node (x_i)
 
-
+        # print(x_j.shape)
+        # print(x_i.shape)
+        # self.attention = self.attention.to(x_i.dtype)
+        # print(self.attention.dtype)
+        # print(x_i.dtype)
+        x_i = x_i.to(self.attention.dtype)
+        # print(self.attention.dtype)
+        # print(x_i.dtype)
         alpha = torch.matmul(x_i, self.attention).squeeze(-1)
         alpha = torch.softmax(alpha, dim=0)  # Normalize attention scores
 
         # Apply shared attention score and weights to neighbor features
+        x_j = x_j.to(self.attention.dtype)
+
         return alpha.unsqueeze(-1) * torch.matmul(x_j, self.weight)
 
     def update(self, aggr_out):
@@ -255,6 +330,7 @@ class DynamicTrainableStepFunctionF5(nn.Module):
 
         # Compute differences and sigmoid values
         differences = x_expanded - thresholds  # x - t_i
+        differences = differences.half()
         sigmoid_values = torch.sigmoid(self.alpha * differences)
 
         # Sum over the last dimension
@@ -276,7 +352,7 @@ class DynamicTrainableStepFunctionF5(nn.Module):
 
 
 class DynamicTrainableStepFunctionF5_batch(nn.Module):
-    def __init__(self, scale=10.0):
+    def __init__(self, scale=1.0):
         super(DynamicTrainableStepFunctionF5_batch, self).__init__()
         self.scale = nn.Parameter(torch.tensor(scale, dtype=torch.float32))
         self.thresholds_cache = {}
@@ -293,6 +369,7 @@ class DynamicTrainableStepFunctionF5_batch(nn.Module):
         return self.thresholds_cache[N], self.coefficients_cache[N]
 
     def forward(self, x, a):
+        # a = [N]
         device = x.device
         dtype = x.dtype
         output = torch.empty_like(x)

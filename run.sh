@@ -1,13 +1,13 @@
 dname=$1
-method=$2
-lr=$3
+method=GIN
+lr=0.01
 wd=0.05
-numL=$4
-numK=$5
+numL=5
+numK=5
 GIN_num_layers=2
 GIN_hidden_dim=8
 cuda=0
-reg_lambda=$6
+reg_lambda=0.01
 runs=5
 epochs=500
 

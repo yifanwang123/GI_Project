@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import sys
 from layers import GINModel, InfoCollect, IndiiLayer, TrainableHardThreshold, DynamicTrainableStepFunctionF5, DynamicTrainableStepFunctionF5_batch, LocalInfo
+from layers import GATNet, FixedWeightMessagePassing
 from torch_geometric.data import Data
 import time
 # import torch_scatter
@@ -941,15 +942,17 @@ class ISGNN(nn.Module):
 
 
 class approxGNN(nn.Module):
-    def __init__(self, device, hyperpara1, hyperpara2, local_in, local_out, dname):
+    def __init__(self, device, hyperpara1, hyperpara2, local_in, local_out):
         super(approxGNN, self).__init__()
         self.hyper1 = hyperpara1
         self.hyper2 = hyperpara2
         self.device = device
-        self.dname = dname
         self.k = 1000
         self.epsilon = 5
         self.local = InfoCollect(local_in, local_out)
+        # self.local = GATNet(1, 1)
+        self.inv = InfoCollect(local_in, local_out)
+        self.f5 = DynamicTrainableStepFunctionF5()
 
 
     def find_nodes_with_most_common_label(self, partition):
@@ -995,20 +998,49 @@ class approxGNN(nn.Module):
 
 
 
-    def refine(self, info, data):
+    def refine(self, info, data, is_info=True):
         # print(device)
         fixed = False
         edge_index = data.edge_index
         num_nodes = data.x.shape[0]
+        # print(info.shape)
+        if is_info:
+            D = info - info.T
+            # print(D.shape)
+            # sys.exit()
+            D_1 = CustomSignFunction.apply(D, self.k, self.epsilon)
+
+            # print(D_1.shape)
+            # sys.exit()
+            D = D_1.sum(dim=1, keepdim=True)
+            # print(D)
+            # sys.exit()
+            new_p = self.f5(D, num_nodes).squeeze()
+            prev = new_p
+
+        else:
+            # print(info.shape)
+            prev = info
+        # print(new_p.shape)
+        # sys.exit()
+
+
         time = 0
         while not fixed and time <= self.hyper1:
-            X = self.local(info, edge_index).view(-1, 1)
-            print(X)
-            print(X.shape)
+            X = self.local(prev, edge_index).view(-1, 1)
+            # print(X)
+            # print(X.shape)
+            X = X.half()
             D = X - X.T
+
+            # print(D)
+            # sys.exit()
             D_1 = CustomSignFunction.apply(D, self.k, self.epsilon)
             D = D_1.sum(dim=1, keepdim=True)
+            # print(D)
             new_p = self.f5(D, num_nodes).squeeze()
+            # print(new_p)
+            # sys.exit()
 
             if torch.equal(new_p, prev):
                 fixed = True
@@ -1018,49 +1050,89 @@ class approxGNN(nn.Module):
         new_p = new_p.squeeze()
         return new_p
 
-
+    def is_discrete(self, partition, num_nodes):
+        partition = torch.ceil(partition).int()
+        partition = partition.tolist()
+        label_counts = Counter(partition)
+        # print(len(set(label_counts)))
+        if len(set(label_counts)) >= 0.2 * num_nodes:
+            print(f'number of cells: {len(set(label_counts))}')
+            return True
+        return False
+        
 
 
     def forward(self, data):
+        device = data.x.device
         num_nodes = data.x.shape[0]
+        # print(data.x)
+        # sys.exit()
         p_0 = self.refine(data.x, data)
-
-        indi_one_hot = self.generate_one_hot_vectors(self.find_nodes_with_most_common_label(p_0), num_nodes)
-
-        candidate = []
-        for i in range(num_nodes):
-            for indi_vector in indi_one_hot[:int(self.hyper2*len(indi_one_hot))]:
-                p_tempt = p_0 + indi_vector
-                p_current = self.refine(p_tempt, data)
-                candidate.append(p_current)
-
-
-
-
-
-
-
-
-
-        
-        
-
-
-
-
+        # print(p_0)
+        # sys.exit()
+        # total = (1+num_nodes)*num_nodes / 2
+        # print(total)
+        # candidate = []
+        layer_num = 0
+        current_layer = [p_0]
+        max_inv = self.inv(p_0.unsqueeze(dim=1), data.edge_index).sum(dim=0)
+        next_layer = []
+        # print(max_inv.shape)
+        # print(max_inv.sum(dim=0))
+        # sys.exit()
+        while current_layer and layer_num <= 2:
+            layer_num += 1
+            # print(f'Layer {layer_num}')
+            for partition in current_layer:
+                current_inv = self.inv(partition.unsqueeze(dim=1), data.edge_index).sum(dim=0)
+                if  current_inv < max_inv:
+                    continue
+                else:
+                    max_inv = current_inv
+                
 
 
+                # if self.is_discrete(partition, num_nodes):
+                #     # print(partition)
+                #     candidate.append(partition)
+                #     # sys.exit()
 
+                # self.is_discrete(partition, num_nodes)
+                indi_one_hot = self.generate_one_hot_vectors(self.find_nodes_with_most_common_label(partition), num_nodes)
+                # print(len(indi_one_hot), int(self.hyper2*len(indi_one_hot)))
+                for indi_vector in indi_one_hot[:int(self.hyper2*len(indi_one_hot))]:
+                    # print(indi_vector)
+                    indi_vector = indi_vector.to(device=device)
+                    # print(indi_vector.device, partition.device)
+                    # print(partition)
+                    # print(indi_vector)
+                    p_tempt = partition + indi_vector
+                    p_tempt = p_tempt.unsqueeze(dim=1)
+                    # sys.exit()
+                    p_current = self.refine(p_tempt, data, is_info=False)
+                    # print(p_current)
+                    # sys.exit()
+
+                    next_layer.append(p_current)
+
+            current_layer = next_layer
+            next_layer = []
+            # print(len(current_layer))
+            # sys.exit()
+        # sys.exit()
+        # print(max_inv)
+        # sys.exit()
+        return max_inv
 
 
 
 
 class SiameseNetwork(nn.Module):
-    def __init__(self, device, prop, dname):
+    def __init__(self, device):
         super(SiameseNetwork, self).__init__()
-        self.custom_network = ExactModel(prop=prop)
+        self.custom_network = approxGNN(device, 10, 0.5, 6, 6)
         self.device = device
-        self.dname = dname
+        # self.dname = dname
         # print(self.device)
     def forward(self, input1, input2, labels):
 
@@ -1068,110 +1140,39 @@ class SiameseNetwork(nn.Module):
         # print(self.device)
         # print(labels)
         # sys.exit()
-        label = int(labels.item())
-        # print(label)
+        # label = int(labels.item())
+        # print(f'ISO: {label}')
         # sys.exit()
-        output1, leaves1 = self.custom_network(input1, self.device)
+        # print(f'graph1=========================================================================================')
+        output1 = self.custom_network(input1)
         time_1 = time.time()
-        output2, leaves2 = self.custom_network(input2, self.device)
-        G_1 = to_networkx(input1, to_undirected=True)
-        G_2 = to_networkx(input2, to_undirected=True)
-        # print(output1)
-        # print(output2)
-        a = check_iso(output1.tolist(), output2.tolist(), G_1, G_2, label)
-        # print(a)
-        if not a:
-            
-            # print('==================================================1')
-            # print(G_1.edges())
-            # # torch.save(input1.edge_index, 'edge_index_1.pt')
-            leaves_converted_1 = {key: [tensor.tolist() for tensor in value] for key, value in leaves1.items()}
-            leaves_converted_2 = {key: [tensor.tolist() for tensor in value] for key, value in leaves2.items()}
+        # print(f'graph2=========================================================================================')
 
-            for (partition_1, score_1), (partition_2, score_2) in zip(leaves_converted_1.items(), leaves_converted_2.items()):
-                # print(type(score_1))
+        output2 = self.custom_network(input2)
+        # G_1 = to_networkx(input1, to_undirected=True)
+        # G_2 = to_networkx(input2, to_undirected=True)
+        # a = check_iso(output1.tolist(), output2.tolist(), G_1, G_2, label)
+        # if not a:
 
-                if score_1 == score_2:
+        #     leaves_converted_1 = {key: [tensor.tolist() for tensor in value] for key, value in leaves1.items()}
+        #     leaves_converted_2 = {key: [tensor.tolist() for tensor in value] for key, value in leaves2.items()}
+
+        #     for (partition_1, score_1), (partition_2, score_2) in zip(leaves_converted_1.items(), leaves_converted_2.items()):
+        #         # print(type(score_1))
+
+        #         if score_1 == score_2:
                     
-                    print('equal')
-                elif score_1 > score_2:
-                    print('partition1 large')
-                else:
-                    print('partition2 large')
+        #             print('equal')
+        #         elif score_1 > score_2:
+        #             print('partition1 large')
+        #         else:
+        #             print('partition2 large')
 
-                # print(input1.edge_index)
-                # print(score_1)
-            # print('==================================================2')
-            # file_name = '/home/cds/Documents/Yifan/GI_Project/find_why.txt'
-
-            # with open(file_name, "w") as file:
-            #     file.write('G_1 \n')
-            #     for edge in G_1.edges():
-            #         file.write(str(edge) + '\n')
-            #     file.write('G_1 cl \n')
-            #     file.write(str(output1.tolist()) + '\n')
-
-
-                
-            #     file.write('G_2 \n')
-            #     for edge in G_2.edges():
-            #         file.write(str(edge) + '\n')
-            #     file.write('G_2 cl \n')
-            #     file.write(str(output2.tolist()))
-
-
-                
-
-
-            # print(G_2.edges())
-            # # torch.save(input2.edge_index, 'edge_index_2.pt')
-
-
-            # for (partition_1, score_1), (partition_2, score_2) in zip(leaves1.items(), leaves2.items()):
-            #     print(partition_2.tolist())
-                # print(score_2)
-            
-            # G_1 = nx.Graph()
-            # G_2 = nx.Graph()
-            # nodes_list = [i for i in range(100)]
-            # G_1.add_nodes_from(nodes_list)
-            # G_2.add_nodes_from(nodes_list)
-
-            # edges1 = input1.edge_index.t().tolist()  # Transpose and convert to list of edges
-            # G_1.add_edges_from(edges1)
-
-            # edges2 = input2.edge_index.t().tolist()  # Transpose and convert to list of edges
-            # G_2.add_edges_from(edges2)
-
-            # cl_lst = output1.tolist()
-            # cl_2_lst = output2.tolist()
-
-
-            # label_1 = {}
-            # label_2 = {}
-            # for i in range(len(output1)):
-            #     label_1[i] = cl_lst[i]
-            #     label_2[i] = cl_2_lst[i]
-
-
-            # draw_two_graphs(G_1, G_2, label_1, label_2)
-            # # Save the first graph in adjacency list format
-            # nx.write_adjlist(G_1, "graph1.adjlist")
-
-            # # Save the second graph in adjacency list format
-            # nx.write_adjlist(G_2, "graph2.adjlist")
-            # sys.exit()
-            return False
-        # output = F.cosine_similarity(output1, output2, dim=1)
-        # squared_differences = (output1 - output2) ** 2  # Shape: (3, 5)
-        # output = torch.norm(output1 - output2, p=2, dim=-1)
-        # output = torch.sigmoid(output)  
-        # print(output)
+        #     return False
+        
+        # print(abs(output1 - output2))
         # sys.exit()
-        # indices1 = torch.stack(indices1)
-        # indices2 = torch.stack(indices2)
-        # print(f'twin model forward time: {time.time()-time_0}')s
-        return True
+        return abs(output1 - output2)
     
     def reset_parameters(self):
         for name, param in self.named_parameters():

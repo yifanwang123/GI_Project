@@ -94,7 +94,7 @@ def evaluate_model(model, dataloader, device, purpose='valid'):
             is_correct = model(graph_1_data_tensor, graph_2_data_tensor, labels)
             # loss = criterion(score, labels, idx1, idx2, graph_1_nodes_tensor, graph_2_nodes_tensor)
             # acc = eval_acc(labels, score, purpose)
-            if is_correct:
+            if is_correct < 2:
             # total_loss += loss.item()
                 accuracy += 1
             # else:
@@ -264,7 +264,7 @@ def main():
     graph_pairs = load_samples(data_pairs)
     labels = load_labels(data_labels)
     num_samples = len(graph_pairs)
-    print(f'Num_samples: {num_samples}')
+    # print(f'Num_samples: {num_samples}')
     dataset = GraphPairDataset(graph_pairs, labels)
     prop = args.prop
     
@@ -272,8 +272,8 @@ def main():
     if args.cuda in [0, 1, 2, 3]:
         device = torch.device('cuda:'+str(args.cuda) if torch.cuda.is_available() else 'cpu')
     
-    isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
-    isgnn.to(device)
+    # isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
+    # isgnn.to(device)
     # print(f'device: {device}')
     model = SiameseNetwork(device, prop, dname=data_name)
 
@@ -310,11 +310,15 @@ def main():
             start_time = time.time()
 
             train_dataset, valid_dataset, test_dataset = random_split(dataset, [train_size, valid_size, test_size])
-            # train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
-            # valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
-
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
+            valid_loader = DataLoader(valid_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
             test_loader = DataLoader(test_dataset, batch_size=args.batch_size, collate_fn=custom_collate_fn)
             # print(device)
+
+
+
+
+            valid_acc = evaluate_model(model, test_loader, device, purpose='test')
             test_acc = evaluate_model(model, test_loader, device, purpose='test')
             
             one_run_time = time.time() - start_time

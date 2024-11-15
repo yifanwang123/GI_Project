@@ -51,8 +51,10 @@ class Custom_Loss(nn.Module):
         self.margin = margin
         
 
-    def forward(self, score, y, predicted_idx1, predicted_idx2, true_idx1, true_idx2):
+    # def forward(self, score, y, predicted_idx1, predicted_idx2, true_idx1, true_idx2):
         
+    def forward(self, score, y):
+
         ## score is L2 between two representations: 0 means identical; infinity means different
         
         loss_positive = y * torch.pow(score, 2)  # Loss when the objects are the same
@@ -66,9 +68,9 @@ class Custom_Loss(nn.Module):
         # sys.exit()
         loss_2 = 0
 
-        loss_2 = F.mse_loss(predicted_idx1.squeeze(-1), true_idx1)
-        loss_2 += F.mse_loss(predicted_idx2.squeeze(-1), true_idx2)
-        loss_2 = loss_2/2
+        # loss_2 = F.mse_loss(predicted_idx1.squeeze(-1), true_idx1)
+        # loss_2 += F.mse_loss(predicted_idx2.squeeze(-1), true_idx2)
+        # loss_2 = loss_2/2
         # print(loss_1.mean(), loss_2)
         # sys.exit()
         
@@ -87,11 +89,11 @@ def evaluate_model(model, dataloader, criterion, device, purpose='valid'):
             graph_1_data_tensor, graph_2_data_tensor, graph_1_matrix_tensor, graph_2_matrix_tensor, graph_1_nodes_tensor, graph_2_nodes_tensor = graph_pair
             graph_1_data_tensor = graph_1_data_tensor.to(device)
             graph_2_data_tensor = graph_2_data_tensor.to(device)
-            graph_1_nodes_tensor = graph_1_nodes_tensor.to(device)
-            graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
+            # graph_1_nodes_tensor = graph_1_nodes_tensor.to(device)
+            # graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
             labels = labels.to(device)
-            score, cl1, cl2, idx1, idx2 = model(graph_1_data_tensor, graph_2_data_tensor)
-            loss = criterion(score, labels, idx1, idx2, graph_1_nodes_tensor, graph_2_nodes_tensor)
+            score = model(graph_1_data_tensor, graph_2_data_tensor, labels)
+            loss = criterion(score, labels)
             acc = eval_acc(labels, score, purpose)
             total_loss += loss.item()
             accuracy += acc
@@ -101,7 +103,7 @@ def evaluate_model(model, dataloader, criterion, device, purpose='valid'):
 
 def eval_acc(y_true, score, purpose='train'):
     a = float('inf')
-    predicted_labels = (score <= 1000).float()
+    predicted_labels = (score <= 10).float()
     correct_predictions = (predicted_labels == y_true)
 
     correct_num = correct_predictions.sum().item()
@@ -260,11 +262,11 @@ def main():
     local_time = time.localtime(current_time)
     formatted_time = time.strftime("%b_%d_%H%M%S", local_time)
     
-    log_file = current_directory + f"/results/log/{data_name}_{args.numL}_{args.numK}_{formatted_time}.csv"
-    results_file = current_directory + f"/results/final/{data_name}_{args.numL}_{args.numK}_{formatted_time}.csv"
+    log_file = current_directory + f"/results/log/{data_name}_{formatted_time}.csv"
+    results_file = current_directory + f"/results/final/{data_name}_{formatted_time}.csv"
 
-    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried_{args.numL}"
-    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels_{args.numL}"
+    data_pairs = current_directory + f"/data/{data_name}/{data_name}_paried"
+    data_labels = current_directory + f"/data/{data_name}/{data_name}_labels"
 
 
     graph_pairs = load_samples(data_pairs)
@@ -279,16 +281,16 @@ def main():
     if args.cuda in [0, 1]:
         device = torch.device('cuda:'+str(args.cuda)
                             if torch.cuda.is_available() else 'cpu')
-    isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
-    isgnn.to(device)
+    # isgnn = ISGNN(args.output_dim, args.GIN_num_layers, args.GIN_hidden_dim, args.numL, args.numK)
+    # isgnn.to(device)
     
     # model = SiameseNetwork(isgnn, device)
-    model = SiameseNetwork(device, prop)
+    model = SiameseNetwork(device)
 
     # model = ExactModel()
 
     model = model.to(device)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     num_params = count_parameters(model)
     # for name, param in model.named_parameters():
     #     print(name, param.shape)
@@ -340,24 +342,25 @@ def main():
                 model.train()
                 
                 for graph_pair, label in train_loader:
-                    print(f'lable: {label}')
+                    # print(f'lable: {label}')
                     
 
                     graph_1_data_tensor, graph_2_data_tensor, graph_1_matrix_tensor, graph_2_matrix_tensor, graph_1_nodes_tensor, graph_2_nodes_tensor = graph_pair
                     graph_1_data_tensor = graph_1_data_tensor.to(device)
                     graph_2_data_tensor = graph_2_data_tensor.to(device)
 
-                    graph_1_nodes_tensor = graph_1_nodes_tensor.to(device)
-                    graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
+                    # graph_1_nodes_tensor = graph_1_nodes_tensor.to(device)
+                    # graph_2_nodes_tensor = graph_2_nodes_tensor.to(device)
 
-                    # optimizer.zero_grad()
+                    optimizer.zero_grad()
                     
                     # score, cl1, cl2, idx1, idx2 = model(graph_1_data_tensor, graph_2_data_tensor)
-                    score = model(graph_1_data_tensor, graph_2_data_tensor)
-                    sys.exit()
+                    score = model(graph_1_data_tensor, graph_2_data_tensor, label)
+                    # sys.exit()
 
                     label = label.to(device)
-                    loss = Loss(score, label, idx1, idx2, graph_1_nodes_tensor, graph_2_nodes_tensor)
+                    loss = Loss(score, label)
+                    # loss = score
 
                     train_acc = eval_acc(label, score)
                     training_acc_init += train_acc
