@@ -1,4 +1,5 @@
 learning rate,GIN_num_layers,GIN_hidden_dim,train_patience,numL,numK
 0.01,2,8,10,5,5
-1,5,10,6,7
+2,4,8,11,5
 run,epoch,train_loss,train_acc,valid_loss,valid_acc,test_loss,test_acc,epoch_duration,run_duration
+0,0,245705.16892521593,0.53,273173.208431018,0.48,228636.8999723885,0.54,9.723007917404175,_

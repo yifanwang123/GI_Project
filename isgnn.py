@@ -1130,7 +1130,7 @@ class approxGNN(nn.Module):
 class SiameseNetwork(nn.Module):
     def __init__(self, device):
         super(SiameseNetwork, self).__init__()
-        self.custom_network = approxGNN(device, 10, 0.5, 6, 6)
+        self.custom_network = approxGNN(device, 10, 0.2, 6, 6)
         self.device = device
         # self.dname = dname
         # print(self.device)

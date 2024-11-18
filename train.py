@@ -300,7 +300,7 @@ def main():
     train_size = int(args.train_prop * num_samples)
     valid_size = int(args.valid_prop * num_samples)
     test_size = num_samples - train_size - valid_size
-
+    print(f'Train size: {train_size}, valid size: {valid_size}, test size: {test_size}')
     runtime_list = []
     with open(log_file, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -340,9 +340,10 @@ def main():
                 training_loss = 0.0
                 training_acc_init = 0
                 model.train()
-                
+                sample = 0
                 for graph_pair, label in train_loader:
-                    # print(f'lable: {label}')
+                    print(f'sample {sample}, lable: {label}')
+                    sample += 1
                     
 
                     graph_1_data_tensor, graph_2_data_tensor, graph_1_matrix_tensor, graph_2_matrix_tensor, graph_1_nodes_tensor, graph_2_nodes_tensor = graph_pair
