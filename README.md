@@ -1,17 +1,6 @@
 # Graph Isomorphism Project
 This repository contains research code for graph isomorphism testing. It implements what the author refers to as the **Tracy algorithm** for identifying whether two graphs are isomorphic. The core idea is to generate a canonical labelling of each graph via a learned representation. Two graphs are deemed isomorphic if their canonical representations coincide. The implementation draws heavily on PyTorch Geometric, neural networks tailored to graphs (e.g., Graph Isomorphism Networks and Graph Attention Networks), and custom differentiable operators that mimic discrete step functions. A Siamese architecture is trained to produce embeddings whose L2 distance is small for isomorphic pairs and large for non-isomorphic pairs.
 
-
-## Key Features
-
-| Feature | Description |
-|---|---|
-| **Canonical labelling via neural networks** | The algorithm computes canonical labels for each node in a graph using a combination of Graph Isomorphism Network (GIN) layers and trainable thresholding functions, implemented in `isgnn.py` and `layers.py`. |
-| **Siamese training** | A Siamese network is trained to embed pairs of graphs.  If two graphs are isomorphic their embeddings are forced to be close; non‑isomorphic pairs are forced apart. |
-| **Flexible dataset loading** | Utilities in `utils.py` and the `load_*` scripts prepare graph pairs and labels from several data sources: a `benchmark1` dataset, an `EXP`/`CEXP` dataset of experimental graphs, and a `self_generated_data` dataset for synthetic examples. |
-| **Command‑line configuration** | Hyper‑parameters such as the number of layers, hidden dimensions, learning rate and regularisation terms are defined centrally in `config.py` and exposed via the command line. |
-| **Reproducible runs** | Shell scripts (`run.sh`, `run_*.sh`, and `run_for_testing_*.sh`) encapsulate typical experiments so that results can be reproduced with a single command.  Experimental results are written to `results/`. |
-
 ## Prerequisites
 
 This project requires **Python ≥ 3.8** and the following Python packages:
