@@ -16,9 +16,9 @@ You may also need `matplotlib` if you wish to visualise graphs or intermediate r
 ## Datasets
 The project supports multiple datasets:
 
-benchmark1 – A set of paired graphs stored in plain text .npz files. The load_dataset_benchmark1.py script reads each graph, generates a corresponding record file, pairs graphs with their isomorphic counterparts and labels them accordingly.
+[benchmark1](https://www.lics.rwth-aachen.de/go/id/rtok/) – A set of paired graphs stored in plain text .npz files. The load_dataset_benchmark1.py script reads each graph, generates a corresponding record file, pairs graphs with their isomorphic counterparts and labels them accordingly.
 
-EXP / CEXP – Experimental graphs where each graph is stored as a NumPy adjacency matrix. Use load_EXP_CEXP.py to create graph pairs and labels.
+[EXP / CEXP](https://arxiv.org/abs/2010.01179) – Experimental graphs where each graph is stored as a NumPy adjacency matrix. Use load_EXP_CEXP.py to create graph pairs and labels.
 
 self_generated_data – Synthetic graphs created by the author. Use load_dataset_self_generated.py to generate graph pairs and labels. A PDF (self_generated_2_exact.pdf) documents the exact labelling process for a set of synthetic graphs.
 
