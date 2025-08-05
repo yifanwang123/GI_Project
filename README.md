@@ -1,0 +1,52 @@
+# Graph Isomorphism Project
+This repository contains research code for graph isomorphism testing. It implements what the author refers to as the **Tracy algorithm** for identifying whether two graphs are isomorphic. The core idea is to generate a canonical labelling of each graph via a learned representation. Two graphs are deemed isomorphic if their canonical representations coincide. The implementation draws heavily on PyTorch Geometric, neural networks tailored to graphs (e.g., Graph Isomorphism Networks and Graph Attention Networks), and custom differentiable operators that mimic discrete step functions. A Siamese architecture is trained to produce embeddings whose L2 distance is small for isomorphic pairs and large for non-isomorphic pairs.
+
+
+## Key Features
+
+| Feature | Description |
+|---|---|
+| **Canonical labelling via neural networks** | The algorithm computes canonical labels for each node in a graph using a combination of Graph Isomorphism Network (GIN) layers and trainable thresholding functions, implemented in `isgnn.py` and `layers.py`. |
+| **Siamese training** | A Siamese network is trained to embed pairs of graphs.  If two graphs are isomorphic their embeddings are forced to be close; non‑isomorphic pairs are forced apart. |
+| **Flexible dataset loading** | Utilities in `utils.py` and the `load_*` scripts prepare graph pairs and labels from several data sources: a `benchmark1` dataset, an `EXP`/`CEXP` dataset of experimental graphs, and a `self_generated_data` dataset for synthetic examples. |
+| **Command‑line configuration** | Hyper‑parameters such as the number of layers, hidden dimensions, learning rate and regularisation terms are defined centrally in `config.py` and exposed via the command line. |
+| **Reproducible runs** | Shell scripts (`run.sh`, `run_*.sh`, and `run_for_testing_*.sh`) encapsulate typical experiments so that results can be reproduced with a single command.  Experimental results are written to `results/`. |
+
+## Prerequisites
+
+This project requires **Python ≥ 3.8** and the following Python packages:
+
+* [`torch`](https://pytorch.org/) ≥ 1.10 with CUDA support if training on a GPU.
+* [`torch_geometric`](https://pytorch-geometric.readthedocs.io/) and its dependencies (`torch_scatter`, `torch_sparse`, `torch_cluster`, `torch_spline_conv`).  Follow the [official installation instructions](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html) because wheels depend on your CUDA and PyTorch versions.
+* [`numpy`](https://numpy.org/) and [`scipy`](https://www.scipy.org/).
+* [`networkx`](https://networkx.org/) for graph parsing and manipulation.
+* [`tqdm`](https://tqdm.github.io/) for progress bars.
+
+You may also need `matplotlib` if you wish to visualise graphs or intermediate results.
+
+## Datasets
+The project supports multiple datasets:
+
+benchmark1 – A set of paired graphs stored in plain text .npz files. The load_dataset_benchmark1.py script reads each graph, generates a corresponding record file, pairs graphs with their isomorphic counterparts and labels them accordingly.
+
+EXP / CEXP – Experimental graphs where each graph is stored as a NumPy adjacency matrix. Use load_EXP_CEXP.py to create graph pairs and labels.
+
+self_generated_data – Synthetic graphs created by the author. Use load_dataset_self_generated.py to generate graph pairs and labels. A PDF (self_generated_2_exact.pdf) documents the exact labelling process for a set of synthetic graphs.
+
+Each dataset yields a collection of samples of the form (graph_1_data, graph_2_data, list_of_matrix_1, list_of_matrix_2, idx1, idx2) plus a binary label indicating whether the graphs are isomorphic. These samples are serialised with torch.save and pickle.dump and loaded on the fly by train.py
+
+## Run
+```
+python train.py \
+    --dname benchmark1 \        # dataset name; must match folder under `data/`
+    --GIN_num_layers 2 \        # number of GIN layers in the encoder
+    --GIN_hidden_dim 8 \        # hidden dimension size
+    --epochs 500 \              # number of training epochs
+    --runs 5 \                  # number of random restarts
+    --lr 0.01 \                 # learning rate
+    --weight_decay 0.05 \       # weight decay (L2 regularisation)
+    --numL 5 \                  # number of nodes to sample for local information
+    --numK 5 \                  # number of partitions in ExactModel
+    --reg_lambda 0.01 \         # regularisation term for the ExactModel
+    --cuda 0                    # GPU id (set to -1 for CPU)
+```
